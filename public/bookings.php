@@ -55,9 +55,11 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
                 <a class="btn btn-outline-secondary" href="?month=<?= h($nextMonth) ?>"><?= h($nextMonth) ?> &gt;</a>
             </div>
             <div class="d-flex gap-2 align-items-center">
-                <span class="status-dot status-new"></span><small>Новый</small>
-                <span class="status-dot status-confirmed"></span><small>Подтверждён</small>
-                <span class="status-dot status-completed"></span><small>Проведён</small>
+                <span class="badge-legend"><span class="status-dot status-new"></span><small>Новый</small></span>
+                <span class="badge-legend"><span class="status-dot status-confirmed"></span><small>Подтверждён</small></span>
+                <span class="badge-legend"><span class="status-dot status-completed"></span><small>Проведён</small></span>
+                <span class="badge-legend"><span class="status-dot status-canceled"></span><small>Отменён</small></span>
+                <span class="badge-legend"><span class="status-dot status-no_show"></span><small>Неявка</small></span>
             </div>
         </div>
         <div class="calendar-grid" data-active-date="<?= h($activeDate) ?>">
@@ -67,7 +69,8 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
             <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
                 <?php
                 $dateValue = $monthStart->format('Y-m-') . str_pad((string)$day, 2, '0', STR_PAD_LEFT);
-                $statuses = array_map(fn($b) => $b['status'], $bookingsByDay[$dateValue] ?? []);
+                $dayItems = $bookingsByDay[$dateValue] ?? [];
+                $statuses = array_map(fn($b) => $b['status'], $dayItems);
                 $statusCounts = array_count_values($statuses);
                 arsort($statusCounts);
                 $dominantStatus = count($statusCounts) === 1 ? array_key_first($statusCounts) : null;
@@ -78,6 +81,9 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
                         class="day-tile <?= $dominantStatus ? 'status-' . h($dominantStatus) : '' ?> <?= $isMixed ? 'mixed' : '' ?> <?= $activeClass ?>"
                         data-date="<?= h($dateValue) ?>">
                     <div class="day-number"><?= $day ?></div>
+                    <?php if ($dayItems): ?>
+                        <span class="day-count"><?= count($dayItems) ?></span>
+                    <?php endif; ?>
                     <?php if ($isMixed): ?>
                         <div class="status-markers">
                             <?php foreach (array_keys($statusCounts) as $status): ?>

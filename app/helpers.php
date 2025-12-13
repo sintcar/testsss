@@ -84,36 +84,58 @@ function render_header(string $title = 'Quest Manager'): void
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title><?= h($title) ?></title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/assets/css/style.css">
     </head>
     <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/index.php">Quest Manager</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/bookings.php">Бронирования</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/booking_create.php">Новое бронирование</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/quests.php">Квесты</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/finance.php">Финансы</a></li>
-                </ul>
-                <span class="navbar-text text-white">Доступ без авторизации</span>
+    <header class="app-header">
+        <div class="app-shell">
+            <div class="topbar">
+                <a class="brand" href="/index.php">Quest Manager</a>
+                <button class="nav-toggle" type="button" aria-label="Меню" data-toggle-nav>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <nav class="topnav" data-nav>
+                    <a class="nav-link" href="/bookings.php">Бронирования</a>
+                    <a class="nav-link" href="/booking_create.php">Новое бронирование</a>
+                    <a class="nav-link" href="/quests.php">Квесты</a>
+                    <a class="nav-link" href="/finance.php">Финансы</a>
+                </nav>
+                <div class="user-box">
+                    <span class="small"><?= h(current_user()['email']) ?></span>
+                    <a class="btn-ghost" href="/logout.php">Выход</a>
+                </div>
             </div>
         </div>
-    </nav>
-    <div class="container">
+    </header>
+    <main class="app-main">
+        <div class="app-container">
     <?php
 }
 
 function render_footer(): void
 {
     ?>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.querySelector('[data-toggle-nav]');
+            const nav = document.querySelector('[data-nav]');
+            if (toggle && nav) {
+                toggle.addEventListener('click', () => {
+                    nav.classList.toggle('is-open');
+                });
+            }
+            const current = window.location.pathname;
+            nav?.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
     </body>
     </html>
     <?php
