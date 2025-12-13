@@ -12,7 +12,15 @@ function start_session(): void
 function current_user(): ?array
 {
     start_session();
-    return $_SESSION['user'] ?? null;
+    if (!isset($_SESSION['user'])) {
+        $_SESSION['user'] = [
+            'id' => null,
+            'email' => 'Автодоступ',
+            'role' => 'owner',
+        ];
+    }
+
+    return $_SESSION['user'];
 }
 
 function is_post(): bool
