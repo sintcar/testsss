@@ -20,7 +20,9 @@ function authenticate(string $pin): bool
 
 function require_login(): void
 {
-    current_user();
+    if (!current_user()) {
+        redirect('/login.php');
+    }
 }
 
 function logout(): void
