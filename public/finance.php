@@ -3,7 +3,6 @@ require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/finance_service.php';
 
-require_login();
 $pdo = ensure_db_connection();
 
 $from = $_GET['from'] ?? null;

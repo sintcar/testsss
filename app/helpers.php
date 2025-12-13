@@ -13,7 +13,11 @@ function current_user(): ?array
 {
     start_session();
 
-    return $_SESSION['user'] ?? null;
+    return $_SESSION['user'] ?? [
+        'id' => null,
+        'email' => 'Без авторизации',
+        'role' => 'owner',
+    ];
 }
 
 function is_post(): bool
@@ -69,7 +73,6 @@ function flash(string $key, ?string $message = null): ?string
 function render_header(string $title = 'Quest Manager'): void
 {
     start_session();
-    $user = current_user();
     ?>
     <!doctype html>
     <html lang="ru">
@@ -94,10 +97,7 @@ function render_header(string $title = 'Quest Manager'): void
                     <li class="nav-item"><a class="nav-link" href="/quests.php">Квесты</a></li>
                     <li class="nav-item"><a class="nav-link" href="/finance.php">Финансы</a></li>
                 </ul>
-                <span class="navbar-text text-white me-3"><?= $user ? h($user['email']) . ' (' . h($user['role']) . ')' : '' ?></span>
-                <?php if ($user): ?>
-                    <a class="btn btn-outline-light" href="/logout.php">Выйти</a>
-                <?php endif; ?>
+                <span class="navbar-text text-white">Доступ без авторизации</span>
             </div>
         </div>
     </nav>
@@ -117,8 +117,5 @@ function render_footer(): void
 
 function require_owner(): void
 {
-    $user = current_user();
-    if (!$user || $user['role'] !== 'owner') {
-        redirect('/index.php');
-    }
+    // Авторизация отключена.
 }

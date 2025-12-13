@@ -3,7 +3,6 @@ require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/booking_service.php';
 
-require_login();
 require_owner();
 $pdo = ensure_db_connection();
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
