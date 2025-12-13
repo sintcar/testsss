@@ -21,6 +21,7 @@ function authenticate(string $pin): bool
 function require_login(): void
 {
     if (!current_user()) {
+        flash('error', 'Для доступа необходимо авторизоваться.');
         redirect('/login.php');
     }
 }
