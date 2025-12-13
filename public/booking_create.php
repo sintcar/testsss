@@ -4,7 +4,7 @@ require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/booking_service.php';
 
 require_login();
-$pdo = get_db();
+$pdo = ensure_db_connection();
 $quests = get_active_quests($pdo);
 $message = null;
 $error = null;
