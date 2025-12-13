@@ -23,7 +23,7 @@ function authenticate(string $email, string $password): bool
 function require_login(): void
 {
     if (!current_user()) {
-        redirect('/public/login.php');
+        redirect('/login.php');
     }
 }
 

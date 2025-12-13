@@ -30,7 +30,7 @@ if (is_post()) {
         $stmt->execute($data);
         $id = (int)$pdo->lastInsertId();
     }
-    redirect('/public/quests.php');
+    redirect('/quests.php');
 }
 
 render_header($id ? 'Редактирование квеста' : 'Новый квест');
