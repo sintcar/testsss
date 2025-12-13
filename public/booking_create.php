@@ -9,23 +9,40 @@ $message = null;
 $error = null;
 
 if (is_post()) {
-    $data = [
-        'quest_id' => $_POST['quest_id'],
-        'start_at' => $_POST['start_at'],
-        'players' => (int)$_POST['players'],
-        'age_info' => $_POST['age_info'],
-        'client_name' => $_POST['client_name'],
-        'phone' => $_POST['phone'],
-        'tea_room' => isset($_POST['tea_room']),
-        'status' => $_POST['status'],
-        'comment' => $_POST['comment'],
-    ];
-    $result = create_booking($data);
-    if ($result['success']) {
-        $pricing = $result['pricing'];
-        $message = 'Бронирование создано. Стоимость: ' . $pricing['total'] . '₽';
-    } else {
-        $error = $result['message'];
+    $date = $_POST['date'] ?? '';
+    $timeSlot = $_POST['time_slot'] ?? '';
+    $start = $date && $timeSlot ? DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $timeSlot) : null;
+    if (!$start) {
+        $error = 'Укажите корректные дату и время';
+    }
+
+    $selectedQuestId = (int)($_POST['quest_id'] ?? 0);
+    $availableSlots = $date ? getAvailableTimeSlots($pdo, $selectedQuestId, $date) : [];
+    if ($date && !$availableSlots) {
+        $error = 'На выбранную дату свободного времени нет';
+    } elseif (isset($start) && $availableSlots && !in_array($timeSlot, $availableSlots, true)) {
+        $error = 'Выбранное время недоступно';
+    }
+
+    if (!$error) {
+        $data = [
+            'quest_id' => $selectedQuestId,
+            'start_at' => $start->format('Y-m-d H:i:s'),
+            'players' => (int)$_POST['players'],
+            'age_info' => $_POST['age_info'],
+            'client_name' => $_POST['client_name'],
+            'phone' => $_POST['phone'],
+            'tea_room' => isset($_POST['tea_room']),
+            'status' => $_POST['status'],
+            'comment' => $_POST['comment'],
+        ];
+        $result = create_booking($data);
+        if ($result['success']) {
+            $pricing = $result['pricing'];
+            $message = 'Бронирование создано. Стоимость: ' . $pricing['total'] . '₽';
+        } else {
+            $error = $result['message'];
+        }
     }
 }
 
@@ -53,9 +70,15 @@ render_header('Новое бронирование');
                         <option value="confirmed">confirmed</option>
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Дата и время начала</label>
-                    <input type="datetime-local" name="start_at" class="form-control" required>
+                <div class="col-md-3">
+                    <label class="form-label">Дата</label>
+                    <input type="date" name="date" id="dateSelect" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Время</label>
+                    <select name="time_slot" id="timeSelect" class="form-select" disabled required>
+                        <option value="">Выберите время</option>
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Игроки</label>
@@ -83,10 +106,88 @@ render_header('Новое бронирование');
                 </div>
             </div>
             <div class="mt-3">
-                <button class="btn btn-success" type="submit">Создать</button>
+                <div class="alert alert-warning d-none" id="noSlotsMessage">На выбранную дату свободного времени нет</div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-success" type="submit" id="submitButton" disabled>Создать</button>
             </div>
         </form>
     </div>
 </div>
+<?php
+?>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dateInput = document.getElementById('dateSelect');
+        const questSelect = document.querySelector('select[name="quest_id"]');
+        const timeSelect = document.getElementById('timeSelect');
+        const noSlotsMessage = document.getElementById('noSlotsMessage');
+        const submitButton = document.getElementById('submitButton');
+
+        const resetTime = () => {
+            timeSelect.innerHTML = '<option value="">Выберите время</option>';
+            timeSelect.disabled = true;
+            submitButton.disabled = true;
+        };
+
+        const showNoSlots = (show) => {
+            if (show) {
+                noSlotsMessage.classList.remove('d-none');
+                submitButton.disabled = true;
+                timeSelect.disabled = true;
+            } else {
+                noSlotsMessage.classList.add('d-none');
+            }
+        };
+
+        const loadSlots = async () => {
+            const date = dateInput.value;
+            const questId = questSelect.value;
+
+            if (!date) {
+                resetTime();
+                showNoSlots(false);
+                return;
+            }
+
+            resetTime();
+            showNoSlots(false);
+
+            try {
+                const response = await fetch(`/available_slots.php?quest_id=${encodeURIComponent(questId)}&date=${encodeURIComponent(date)}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    showNoSlots(true);
+                    return;
+                }
+
+                if (!data.slots.length) {
+                    showNoSlots(true);
+                    return;
+                }
+
+                data.slots.forEach((slot) => {
+                    const option = document.createElement('option');
+                    option.value = slot;
+                    option.textContent = slot;
+                    timeSelect.appendChild(option);
+                });
+
+                timeSelect.disabled = false;
+                submitButton.disabled = false;
+            } catch (e) {
+                showNoSlots(true);
+            }
+        };
+
+        dateInput.addEventListener('change', loadSlots);
+        questSelect.addEventListener('change', () => {
+            if (dateInput.value) {
+                loadSlots();
+            }
+        });
+    });
+</script>
 <?php
 render_footer();

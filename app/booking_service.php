@@ -66,6 +66,56 @@ function compute_times(array $quest, DateTime $start, bool $tea_room): array
     return [$end, $teaStart, $teaEnd];
 }
 
+function getAvailableTimeSlots(PDO $pdo, int $questId, string $date): array
+{
+    $quest = find_quest($pdo, $questId);
+    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+
+    if (!$quest || !$quest['is_active'] || !$dateObj) {
+        return [];
+    }
+
+    $durationMinutes = (int)$quest['duration'] + 15; // includes technical interval
+
+    $stmt = $pdo->prepare('SELECT start_at, end_at FROM bookings WHERE quest_id = :quest_id AND DATE(start_at) = :date AND status IN ("new", "confirmed", "completed")');
+    $stmt->execute([
+        ':quest_id' => $questId,
+        ':date' => $date,
+    ]);
+
+    $bookings = array_map(function ($row) {
+        return [
+            'start' => new DateTime($row['start_at']),
+            'end' => new DateTime($row['end_at']),
+        ];
+    }, $stmt->fetchAll());
+
+    $slots = [];
+    $current = (clone $dateObj)->setTime(9, 0);
+    $endOfDay = (clone $dateObj)->setTime(21, 0);
+
+    while ($current <= $endOfDay) {
+        $slotStart = clone $current;
+        $slotEnd = (clone $slotStart)->modify('+' . $durationMinutes . ' minutes');
+
+        $hasConflict = false;
+        foreach ($bookings as $booking) {
+            if ($slotStart < $booking['end'] && $slotEnd > $booking['start']) {
+                $hasConflict = true;
+                break;
+            }
+        }
+
+        if (!$hasConflict) {
+            $slots[] = $slotStart->format('H:i');
+        }
+
+        $current->modify('+15 minutes');
+    }
+
+    return $slots;
+}
+
 function has_booking_conflict(PDO $pdo, int $quest_id, DateTime $start, DateTime $end, ?int $exclude_id = null): bool
 {
     $sql = 'SELECT COUNT(*) FROM bookings WHERE quest_id = :quest_id AND status NOT IN ("canceled","no_show") AND NOT (end_at <= :start OR start_at >= :end)';
