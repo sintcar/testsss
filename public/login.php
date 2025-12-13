@@ -4,14 +4,14 @@ require_once __DIR__ . '/../app/helpers.php';
 
 start_session();
 if (current_user()) {
-    redirect('/public/index.php');
+    redirect('/index.php');
 }
 $error = null;
 if (is_post()) {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     if (authenticate($email, $password)) {
-        redirect('/public/index.php');
+        redirect('/index.php');
     } else {
         $error = 'Неверный email или пароль';
     }

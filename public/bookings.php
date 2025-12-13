@@ -11,7 +11,7 @@ if (is_post() && isset($_POST['booking_id'], $_POST['status'])) {
     $payment_type = $_POST['payment_type'] ?? null;
     update_booking_status((int)$_POST['booking_id'], $status, $payment_type);
     flash('success', 'Статус обновлён');
-    redirect('/public/bookings.php');
+    redirect('/bookings.php');
 }
 
 $from = $_GET['from'] ?? null;
@@ -22,7 +22,7 @@ render_header('Бронирования');
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4">Бронирования</h1>
-    <a class="btn btn-primary" href="/public/booking_create.php">Новое бронирование</a>
+    <a class="btn btn-primary" href="/booking_create.php">Новое бронирование</a>
 </div>
 <form class="row g-2 mb-3" method="get">
     <div class="col-auto">

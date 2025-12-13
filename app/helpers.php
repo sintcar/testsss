@@ -62,20 +62,20 @@ function render_header(string $title = 'Quest Manager'): void
     <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/public/index.php">Quest Manager</a>
+            <a class="navbar-brand" href="/index.php">Quest Manager</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/public/bookings.php">Бронирования</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/public/booking_create.php">Новое бронирование</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/public/quests.php">Квесты</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/public/finance.php">Финансы</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/bookings.php">Бронирования</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/booking_create.php">Новое бронирование</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/quests.php">Квесты</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/finance.php">Финансы</a></li>
                 </ul>
                 <span class="navbar-text text-white me-3"><?= $user ? h($user['email']) . ' (' . h($user['role']) . ')' : '' ?></span>
                 <?php if ($user): ?>
-                    <a class="btn btn-outline-light" href="/public/logout.php">Выйти</a>
+                    <a class="btn btn-outline-light" href="/logout.php">Выйти</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -98,6 +98,6 @@ function require_owner(): void
 {
     $user = current_user();
     if (!$user || $user['role'] !== 'owner') {
-        redirect('/public/index.php');
+        redirect('/index.php');
     }
 }

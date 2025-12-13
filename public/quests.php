@@ -11,7 +11,7 @@ render_header('Квесты');
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4">Квесты</h1>
-    <a class="btn btn-primary" href="/public/quest_edit.php">Создать</a>
+    <a class="btn btn-primary" href="/quest_edit.php">Создать</a>
 </div>
 <div class="table-responsive">
     <table class="table table-striped table-sm">
@@ -39,7 +39,7 @@ render_header('Квесты');
                     <?= h($quest['tea_room_price']) ?>₽ / <?= h($quest['tea_room_duration']) ?> мин
                 </td>
                 <td><?= $quest['is_active'] ? 'Активен' : 'Скрыт' ?></td>
-                <td><a class="btn btn-sm btn-outline-primary" href="/public/quest_edit.php?id=<?= h($quest['id']) ?>">Редактировать</a></td>
+                <td><a class="btn btn-sm btn-outline-primary" href="/quest_edit.php?id=<?= h($quest['id']) ?>">Редактировать</a></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
