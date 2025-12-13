@@ -412,6 +412,10 @@ p { margin: 0 0 10px; }
     position: relative;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
     overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
 }
 
 .day-booking-row::before {
@@ -431,6 +435,66 @@ p { margin: 0 0 10px; }
 .day-booking-row.status-no_show::before { background: var(--status-no_show); }
 
 .day-booking-row .small { color: var(--color-text-secondary); }
+
+.day-booking-main { display: flex; flex-direction: column; gap: 4px; }
+
+.day-booking-actions { display: inline-flex; gap: 8px; align-items: flex-start; }
+
+.btn-icon {
+    border: 1px solid var(--color-border);
+    background: #f8fafc;
+    color: var(--color-text);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-icon:hover { background: #e2e8f0; }
+.btn-icon.text-danger { color: var(--status-canceled); border-color: rgba(220,38,38,0.35); background: rgba(220,38,38,0.05); }
+.btn-icon.text-danger:hover { background: rgba(220,38,38,0.12); }
+
+.day-booking-edit {
+    grid-column: 1 / -1;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+    border-radius: 10px;
+    border: 1px dashed var(--color-border);
+    background: #f8fafc;
+    padding: 0 12px;
+    margin-top: 0;
+}
+
+.day-booking-row.editing .day-booking-edit {
+    max-height: 320px;
+    opacity: 1;
+    padding: 12px;
+    margin-top: 4px;
+}
+
+.quick-edit-form { display: flex; flex-direction: column; gap: 8px; }
+
+.quick-edit-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-text); }
+
+.quick-edit-form input,
+.quick-edit-form select,
+.quick-edit-form textarea {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    padding: 8px 10px;
+    font-size: 14px;
+}
+
+.quick-edit-form textarea { resize: vertical; min-height: 60px; }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+
+.edit-actions { display: flex; align-items: center; gap: 10px; }
+
+.form-error { color: var(--status-canceled); font-size: 13px; }
 
 .status-row td { vertical-align: middle; }
 .status-row.status-new td { background: rgba(148, 163, 184, 0.08); }
