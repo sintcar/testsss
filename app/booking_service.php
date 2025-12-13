@@ -136,22 +136,38 @@ function create_booking(array $data): array
     return ['success' => true, 'pricing' => $pricing];
 }
 
-function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null): array
+function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null, string $sort = 'desc', string $period = 'all'): array
 {
+    $allowedSorts = ['asc', 'desc'];
+    $sortDirection = in_array(strtolower($sort), $allowedSorts, true) ? strtoupper($sort) : 'DESC';
+
     $sql = 'SELECT b.*, q.name as quest_name, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, q.duration FROM bookings b JOIN quests q ON b.quest_id = q.id';
     $params = [];
-    if ($from || $to) {
-        $sql .= ' WHERE 1=1';
-        if ($from) {
-            $sql .= ' AND b.start_at >= :from';
-            $params[':from'] = $from . ' 00:00:00';
-        }
-        if ($to) {
-            $sql .= ' AND b.start_at <= :to';
-            $params[':to'] = $to . ' 23:59:59';
-        }
+    $conditions = [];
+
+    if ($from) {
+        $conditions[] = 'b.start_at >= :from';
+        $params[':from'] = $from . ' 00:00:00';
     }
-    $sql .= ' ORDER BY b.start_at DESC';
+    if ($to) {
+        $conditions[] = 'b.start_at <= :to';
+        $params[':to'] = $to . ' 23:59:59';
+    }
+
+    $now = (new DateTime())->format('Y-m-d H:i:s');
+    if ($period === 'upcoming') {
+        $conditions[] = 'b.start_at >= :now';
+        $params[':now'] = $now;
+    } elseif ($period === 'past') {
+        $conditions[] = 'b.start_at < :now';
+        $params[':now'] = $now;
+    }
+
+    if ($conditions) {
+        $sql .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+
+    $sql .= ' ORDER BY b.start_at ' . $sortDirection;
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();

@@ -16,7 +16,13 @@ if (is_post() && isset($_POST['booking_id'], $_POST['status'])) {
 
 $from = $_GET['from'] ?? null;
 $to = $_GET['to'] ?? null;
-$bookings = get_bookings($pdo, $from ?: null, $to ?: null);
+$sort = $_GET['sort'] ?? 'desc';
+$period = $_GET['period'] ?? 'all';
+
+$sort = in_array($sort, ['asc', 'desc'], true) ? $sort : 'desc';
+$period = in_array($period, ['all', 'upcoming', 'past'], true) ? $period : 'all';
+
+$bookings = get_bookings($pdo, $from ?: null, $to ?: null, $sort, $period);
 
 render_header('Бронирования');
 ?>
@@ -30,6 +36,19 @@ render_header('Бронирования');
     </div>
     <div class="col-auto">
         <input type="date" class="form-control" name="to" value="<?= h($to) ?>" placeholder="По">
+    </div>
+    <div class="col-auto">
+        <select class="form-select" name="period">
+            <option value="all" <?= $period === 'all' ? 'selected' : '' ?>>Все</option>
+            <option value="upcoming" <?= $period === 'upcoming' ? 'selected' : '' ?>>Предстоящие</option>
+            <option value="past" <?= $period === 'past' ? 'selected' : '' ?>>Проведенные</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select class="form-select" name="sort">
+            <option value="desc" <?= $sort === 'desc' ? 'selected' : '' ?>>По дате (новые сверху)</option>
+            <option value="asc" <?= $sort === 'asc' ? 'selected' : '' ?>>По дате (старые сверху)</option>
+        </select>
     </div>
     <div class="col-auto">
         <button class="btn btn-outline-secondary" type="submit">Фильтр</button>
@@ -53,42 +72,48 @@ render_header('Бронирования');
         </tr>
         </thead>
         <tbody>
-        <?php foreach ($bookings as $booking): ?>
+        <?php if (empty($bookings)): ?>
             <tr>
-                <td>
-                    <?= h(date('d.m.Y H:i', strtotime($booking['start_at']))) ?> - <?= h(date('H:i', strtotime($booking['end_at']))) ?><br>
-                    <small>Создано: <?= h($booking['created_at']) ?></small>
-                </td>
-                <td><?= h($booking['quest_name']) ?></td>
-                <td><?= h($booking['client_name']) ?><br><small><?= h($booking['phone']) ?></small></td>
-                <td><?= h($booking['players']) ?> (<?= h($booking['age_info']) ?>)</td>
-                <td><span class="badge bg-secondary"><?= h($booking['status']) ?></span></td>
-                <td>
-                    <?php if ($booking['tea_room']): ?>
-                        <?= h(date('H:i', strtotime($booking['tea_start_at']))) ?> - <?= h(date('H:i', strtotime($booking['tea_end_at']))) ?>
-                    <?php else: ?>
-                        -
-                    <?php endif; ?>
-                </td>
-                <td><?= nl2br(h($booking['comment'])) ?></td>
-                <td>
-                    <form method="post" class="d-flex flex-column gap-1">
-                        <input type="hidden" name="booking_id" value="<?= h($booking['id']) ?>">
-                        <select name="status" class="form-select form-select-sm">
-                            <?php foreach (['new','confirmed','completed','canceled','no_show'] as $status): ?>
-                                <option value="<?= $status ?>" <?= $booking['status'] === $status ? 'selected' : '' ?>><?= $status ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <select name="payment_type" class="form-select form-select-sm">
-                            <option value="cash">Наличные</option>
-                            <option value="card">Карта</option>
-                            <option value="transfer">Перевод</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-primary" type="submit">Обновить</button>
-                    </form>
-                </td>
+                <td colspan="8" class="text-center text-muted py-4">Брони пока нет</td>
             </tr>
-        <?php endforeach; ?>
+        <?php else: ?>
+            <?php foreach ($bookings as $booking): ?>
+                <tr>
+                    <td>
+                        <?= h(date('d.m.Y H:i', strtotime($booking['start_at']))) ?> - <?= h(date('H:i', strtotime($booking['end_at']))) ?><br>
+                        <small>Создано: <?= h($booking['created_at']) ?></small>
+                    </td>
+                    <td><?= h($booking['quest_name']) ?></td>
+                    <td><?= h($booking['client_name']) ?><br><small><?= h($booking['phone']) ?></small></td>
+                    <td><?= h($booking['players']) ?> (<?= h($booking['age_info']) ?>)</td>
+                    <td><span class="badge bg-secondary"><?= h($booking['status']) ?></span></td>
+                    <td>
+                        <?php if ($booking['tea_room']): ?>
+                            <?= h(date('H:i', strtotime($booking['tea_start_at']))) ?> - <?= h(date('H:i', strtotime($booking['tea_end_at']))) ?>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                    <td><?= nl2br(h($booking['comment'])) ?></td>
+                    <td>
+                        <form method="post" class="d-flex flex-column gap-1">
+                            <input type="hidden" name="booking_id" value="<?= h($booking['id']) ?>">
+                            <select name="status" class="form-select form-select-sm">
+                                <?php foreach (['new','confirmed','completed','canceled','no_show'] as $status): ?>
+                                    <option value="<?= $status ?>" <?= $booking['status'] === $status ? 'selected' : '' ?>><?= $status ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="payment_type" class="form-select form-select-sm">
+                                <option value="cash">Наличные</option>
+                                <option value="card">Карта</option>
+                                <option value="transfer">Перевод</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" type="submit">Обновить</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
         </tbody>
     </table>
 </div>
