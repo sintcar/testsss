@@ -1,28 +1,22 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 
-const ACCESS_PIN = '232526';
-
 function authenticate(string $pin): bool
 {
-    if ($pin === ACCESS_PIN) {
-        start_session();
-        $_SESSION['user'] = [
-            'id' => null,
-            'email' => 'PIN-доступ',
-            'role' => 'owner',
-        ];
-        return true;
-    }
+    // Авторизация отключена. Сохраняем маркер гостевого доступа для единообразия.
+    start_session();
+    $_SESSION['user'] = [
+        'id' => null,
+        'email' => 'Без авторизации',
+        'role' => 'owner',
+    ];
 
-    return false;
+    return true;
 }
 
 function require_login(): void
 {
-    if (!current_user()) {
-        redirect('/login.php');
-    }
+    // Авторизация отключена.
 }
 
 function logout(): void
