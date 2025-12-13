@@ -6,14 +6,15 @@ start_session();
 if (current_user()) {
     redirect('/index.php');
 }
-$error = null;
+$error = flash('error');
 if (is_post()) {
     $pin = trim($_POST['pin'] ?? '');
     if (authenticate($pin)) {
         redirect('/index.php');
-    } else {
-        $error = 'Неверный пин-код';
     }
+
+    flash('error', 'Неверный пин-код');
+    redirect('/login.php');
 }
 ?>
 <!doctype html>
