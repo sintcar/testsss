@@ -4,7 +4,7 @@ require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/finance_service.php';
 
 require_login();
-$pdo = get_db();
+$pdo = ensure_db_connection();
 
 $from = $_GET['from'] ?? null;
 $to = $_GET['to'] ?? null;

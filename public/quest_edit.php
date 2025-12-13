@@ -5,7 +5,7 @@ require_once __DIR__ . '/../app/booking_service.php';
 
 require_login();
 require_owner();
-$pdo = get_db();
+$pdo = ensure_db_connection();
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $quest = $id ? find_quest($pdo, $id) : null;
 $error = null;
