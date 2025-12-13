@@ -39,6 +39,10 @@ render_header('Финансы');
             <div class="col-md-3"><strong>Квестов:</strong> <?= h($data['count']) ?></div>
             <div class="col-md-3"><strong>Средний чек:</strong> <?= number_format($data['average'], 0, '.', ' ') ?>₽</div>
             <div class="col-md-3"><strong>Чайная:</strong> <?= number_format($data['tea_income'], 0, '.', ' ') ?>₽</div>
+            <?php if ($mode === 'received'): ?>
+                <div class="col-md-3"><strong>Предоплата:</strong> <?= number_format($data['prepayment_income'], 0, '.', ' ') ?>₽</div>
+                <div class="col-md-3"><strong>Доплата:</strong> <?= number_format($data['balance_income'], 0, '.', ' ') ?>₽</div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -49,7 +53,13 @@ render_header('Финансы');
             <th>Дата</th>
             <th>Квест</th>
             <th>Клиент</th>
-            <th>Сумма</th>
+            <?php if ($mode === 'received'): ?>
+                <th>Предоплата</th>
+                <th>Доплата</th>
+                <th>Всего</th>
+            <?php else: ?>
+                <th>Сумма</th>
+            <?php endif; ?>
             <th>Чайная</th>
             <th>Тип оплаты</th>
         </tr>
@@ -57,18 +67,24 @@ render_header('Финансы');
         <tbody>
         <?php if (empty($data['items'])): ?>
             <tr>
-                <td colspan="6" class="text-center text-muted py-4">Нет данных для отображения</td>
+                <td colspan="<?= $mode === 'received' ? 8 : 6 ?>" class="text-center text-muted py-4">Нет данных для отображения</td>
             </tr>
         <?php else: ?>
             <?php foreach ($data['items'] as $item): ?>
                 <?php $pricing = calculate_pricing($item, new DateTime($item['start_at']), (int)$item['players'], (bool)$item['tea_room']); ?>
-                <?php $sum = $mode === 'received' ? $item['total_amount'] : $pricing['total']; ?>
+                <?php $sum = $mode === 'received' ? $item['total_received'] : $pricing['total']; ?>
                 <?php $tea = $mode === 'received' ? $item['tea_room_amount'] : $pricing['tea']; ?>
                 <tr>
                     <td><?= h($mode === 'received' ? $item['paid_at'] : $item['start_at']) ?></td>
                     <td><?= h($item['quest_name']) ?></td>
                     <td><?= h($item['client_name']) ?></td>
-                    <td><?= number_format($sum, 0, '.', ' ') ?>₽</td>
+                    <?php if ($mode === 'received'): ?>
+                        <td><?= number_format($item['prepayment_amount'], 0, '.', ' ') ?>₽</td>
+                        <td><?= number_format($item['balance_amount'], 0, '.', ' ') ?>₽</td>
+                        <td><?= number_format($sum, 0, '.', ' ') ?>₽</td>
+                    <?php else: ?>
+                        <td><?= number_format($sum, 0, '.', ' ') ?>₽</td>
+                    <?php endif; ?>
                     <td><?= number_format($tea, 0, '.', ' ') ?>₽</td>
                     <td><?= h($item['payment_type'] ?? '-') ?></td>
                 </tr>

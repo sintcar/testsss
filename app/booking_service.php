@@ -2,6 +2,19 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
 
+const BOOKING_ACTIVE_STATUSES = ['new', 'confirmed', 'completed'];
+
+function auto_complete_bookings(PDO $pdo): void
+{
+    $now = (new DateTime())->format('Y-m-d H:i:s');
+    $stmt = $pdo->prepare('SELECT id FROM bookings WHERE end_at < :now AND status IN ("new","confirmed")');
+    $stmt->execute([':now' => $now]);
+    $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($ids as $bookingId) {
+        update_booking_status((int)$bookingId, 'completed');
+    }
+}
+
 function get_quests(PDO $pdo): array
 {
     $stmt = $pdo->query('SELECT * FROM quests ORDER BY name');
@@ -188,6 +201,8 @@ function create_booking(array $data): array
 
 function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null, string $sort = 'desc', string $period = 'all'): array
 {
+    auto_complete_bookings($pdo);
+
     $allowedSorts = ['asc', 'desc'];
     $sortDirection = in_array(strtolower($sort), $allowedSorts, true) ? strtoupper($sort) : 'DESC';
 
@@ -223,6 +238,18 @@ function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null, string
     return $stmt->fetchAll();
 }
 
+function get_bookings_by_date(PDO $pdo, string $date): array
+{
+    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$dateObj) {
+        return [];
+    }
+    auto_complete_bookings($pdo);
+    $stmt = $pdo->prepare('SELECT b.*, q.name as quest_name FROM bookings b LEFT JOIN quests q ON b.quest_id = q.id WHERE DATE(b.start_at) = :date ORDER BY b.start_at ASC');
+    $stmt->execute([':date' => $dateObj->format('Y-m-d')]);
+    return $stmt->fetchAll();
+}
+
 function get_booking(PDO $pdo, int $id): ?array
 {
     $stmt = $pdo->prepare('SELECT b.*, q.duration, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, COALESCE(q.name, "Неизвестный квест") as quest_name FROM bookings b LEFT JOIN quests q ON b.quest_id = q.id WHERE b.id = ?');
@@ -231,24 +258,49 @@ function get_booking(PDO $pdo, int $id): ?array
     return $booking ?: null;
 }
 
-function update_booking_status(int $booking_id, string $status, ?string $payment_type = null): void
+function update_booking_status(int $booking_id, string $status, ?string $payment_type = null, ?int $prepayment_amount = null, ?string $prepayment_paid_at = null): void
 {
     $pdo = get_db();
     $booking = get_booking($pdo, $booking_id);
     if (!$booking) {
         return;
     }
-    $stmt = $pdo->prepare('UPDATE bookings SET status = :status, updated_at = NOW() WHERE id = :id');
-    $stmt->execute([':status' => $status, ':id' => $booking_id]);
+    $allowed_statuses = ['new', 'confirmed', 'completed', 'canceled', 'no_show'];
+    if (!in_array($status, $allowed_statuses, true)) {
+        return;
+    }
+
+    $prepayment_value = $prepayment_amount !== null ? max(0, $prepayment_amount) : null;
+    if ($status === 'confirmed' && $prepayment_value === null) {
+        $prepayment_value = 1000;
+    }
+
+    $fields = ['status = :status', 'updated_at = NOW()'];
+    $params = [
+        ':status' => $status,
+        ':id' => $booking_id,
+    ];
+
+    if ($prepayment_value !== null) {
+        $fields[] = 'prepayment_amount = :prepayment_amount';
+        $fields[] = 'prepayment_paid_at = :prepayment_paid_at';
+        $params[':prepayment_amount'] = $prepayment_value;
+        $params[':prepayment_paid_at'] = $prepayment_value > 0 ? ($prepayment_paid_at ?: (new DateTime())->format('Y-m-d H:i:s')) : null;
+    }
+
+    $stmt = $pdo->prepare('UPDATE bookings SET ' . implode(', ', $fields) . ' WHERE id = :id');
+    $stmt->execute($params);
+    $prepayment_used = $prepayment_value ?? (int)$booking['prepayment_amount'];
     if ($status === 'completed') {
         $pricing = calculate_pricing($booking, new DateTime($booking['start_at']), (int)$booking['players'], (bool)$booking['tea_room']);
+        $final_amount = max(0, $pricing['total'] - $prepayment_used);
         $pdo->prepare('INSERT INTO payments (booking_id, base_amount, extra_players_amount, tea_room_amount, total_amount, payment_type, paid_at, created_at) VALUES (:booking_id, :base, :extra, :tea, :total, :payment_type, NOW(), NOW()) ON DUPLICATE KEY UPDATE base_amount = VALUES(base_amount), extra_players_amount = VALUES(extra_players_amount), tea_room_amount = VALUES(tea_room_amount), total_amount = VALUES(total_amount), payment_type = VALUES(payment_type), paid_at = VALUES(paid_at)')
             ->execute([
                 ':booking_id' => $booking_id,
                 ':base' => $pricing['base'],
                 ':extra' => $pricing['extra'],
                 ':tea' => $pricing['tea'],
-                ':total' => $pricing['total'],
+                ':total' => $final_amount,
                 ':payment_type' => $payment_type ?: 'cash',
             ]);
     }

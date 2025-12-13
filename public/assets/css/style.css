@@ -1,3 +1,57 @@
 body { padding-bottom: 40px; }
 .navbar-brand { font-weight: 700; }
 .table-sm td, .table-sm th { padding: 0.35rem; }
+
+.status-new { background-color: #e9ecef; color: #495057; }
+.status-confirmed { background-color: #d0e2ff; color: #0d6efd; }
+.status-completed { background-color: #d1f7d6; color: #0f5132; }
+
+.status-badge { color: #000; text-transform: capitalize; }
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.day-tile {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: left;
+    background: #fff;
+    position: relative;
+    cursor: pointer;
+    min-height: 70px;
+    transition: box-shadow .2s ease;
+}
+
+.day-tile:hover { box-shadow: 0 0 0 2px #0d6efd44; }
+.day-tile.active-day { box-shadow: 0 0 0 2px #0d6efd; }
+.day-tile.empty { visibility: hidden; }
+
+.day-number { font-weight: 700; font-size: 1.1rem; }
+.status-markers { display: flex; gap: 4px; margin-top: 6px; }
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.status-new { background: #adb5bd; }
+.status-dot.status-confirmed { background: #0d6efd; }
+.status-dot.status-completed { background: #198754; }
+
+.day-bookings-list { display: flex; flex-direction: column; gap: 10px; }
+.day-booking-row {
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+}
+
+.status-row.status-new td, .day-booking-row.status-new { background: #f8f9fa; }
+.status-row.status-confirmed td, .day-booking-row.status-confirmed { background: #e7f1ff; }
+.status-row.status-completed td, .day-booking-row.status-completed { background: #e6f6eb; }
+
+.status-row td { vertical-align: middle; }
