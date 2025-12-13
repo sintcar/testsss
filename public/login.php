@@ -8,12 +8,11 @@ if (current_user()) {
 }
 $error = null;
 if (is_post()) {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    if (authenticate($email, $password)) {
+    $pin = trim($_POST['pin'] ?? '');
+    if (authenticate($pin)) {
         redirect('/index.php');
     } else {
-        $error = 'Неверный email или пароль';
+        $error = 'Неверный пин-код';
     }
 }
 ?>
@@ -35,12 +34,8 @@ if (is_post()) {
             <?php endif; ?>
             <form method="post">
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Пароль</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <label class="form-label">Пин-код</label>
+                    <input type="password" name="pin" class="form-control" inputmode="numeric" pattern="\d*" required>
                 </div>
                 <button class="btn btn-primary w-100" type="submit">Войти</button>
             </form>
