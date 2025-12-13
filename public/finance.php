@@ -55,18 +55,25 @@ render_header('Финансы');
         </tr>
         </thead>
         <tbody>
-        <?php foreach ($data['items'] as $item): ?>
-            <?php $sum = $mode === 'received' ? $item['total_amount'] : calculate_pricing($item, new DateTime($item['start_at']), (int)$item['players'], (bool)$item['tea_room'])['total']; ?>
-            <?php $tea = $mode === 'received' ? $item['tea_room_amount'] : calculate_pricing($item, new DateTime($item['start_at']), (int)$item['players'], (bool)$item['tea_room'])['tea']; ?>
+        <?php if (empty($data['items'])): ?>
             <tr>
-                <td><?= h($mode === 'received' ? $item['paid_at'] : $item['start_at']) ?></td>
-                <td><?= h($item['quest_name']) ?></td>
-                <td><?= h($item['client_name']) ?></td>
-                <td><?= number_format($sum, 0, '.', ' ') ?>₽</td>
-                <td><?= number_format($tea, 0, '.', ' ') ?>₽</td>
-                <td><?= h($item['payment_type'] ?? '-') ?></td>
+                <td colspan="6" class="text-center text-muted py-4">Нет данных для отображения</td>
             </tr>
-        <?php endforeach; ?>
+        <?php else: ?>
+            <?php foreach ($data['items'] as $item): ?>
+                <?php $pricing = calculate_pricing($item, new DateTime($item['start_at']), (int)$item['players'], (bool)$item['tea_room']); ?>
+                <?php $sum = $mode === 'received' ? $item['total_amount'] : $pricing['total']; ?>
+                <?php $tea = $mode === 'received' ? $item['tea_room_amount'] : $pricing['tea']; ?>
+                <tr>
+                    <td><?= h($mode === 'received' ? $item['paid_at'] : $item['start_at']) ?></td>
+                    <td><?= h($item['quest_name']) ?></td>
+                    <td><?= h($item['client_name']) ?></td>
+                    <td><?= number_format($sum, 0, '.', ' ') ?>₽</td>
+                    <td><?= number_format($tea, 0, '.', ' ') ?>₽</td>
+                    <td><?= h($item['payment_type'] ?? '-') ?></td>
+                </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
         </tbody>
     </table>
 </div>
