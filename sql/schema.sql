@@ -32,6 +32,8 @@ CREATE TABLE bookings (
     tea_room TINYINT(1) NOT NULL DEFAULT 0,
     tea_start_at DATETIME NULL,
     tea_end_at DATETIME NULL,
+    prepayment_amount INT NOT NULL DEFAULT 0,
+    prepayment_paid_at DATETIME NULL,
     status ENUM('new','confirmed','completed','canceled','no_show') NOT NULL DEFAULT 'new',
     comment TEXT,
     created_by INT NULL,
