@@ -305,3 +305,126 @@ function update_booking_status(int $booking_id, string $status, ?string $payment
             ]);
     }
 }
+
+function quick_update_booking(array $input): array
+{
+    $pdo = get_db();
+    $bookingId = (int)($input['booking_id'] ?? 0);
+    $booking = get_booking($pdo, $bookingId);
+
+    if (!$booking) {
+        return ['success' => false, 'message' => 'Бронь не найдена'];
+    }
+
+    $startTime = trim((string)($input['start_time'] ?? ''));
+    $players = isset($input['players']) ? (int)$input['players'] : 0;
+    $status = $input['status'] ?? $booking['status'];
+    $prepaymentAmount = isset($input['prepayment_amount']) ? max(0, (int)$input['prepayment_amount']) : 0;
+    $comment = trim((string)($input['comment'] ?? ''));
+
+    if ($players <= 0) {
+        return ['success' => false, 'message' => 'Количество игроков должно быть больше нуля'];
+    }
+
+    $timeObj = DateTime::createFromFormat('H:i', $startTime);
+    if (!$timeObj) {
+        return ['success' => false, 'message' => 'Некорректное время начала'];
+    }
+
+    $datePart = (new DateTime($booking['start_at']))->format('Y-m-d');
+    $start = DateTime::createFromFormat('Y-m-d H:i', $datePart . ' ' . $startTime);
+    if (!$start) {
+        return ['success' => false, 'message' => 'Не удалось разобрать время начала'];
+    }
+
+    [$end, $teaStart, $teaEnd] = compute_times($booking, $start, (bool)$booking['tea_room']);
+
+    if (has_booking_conflict($pdo, (int)$booking['quest_id'], $start, $end, $bookingId)) {
+        return ['success' => false, 'message' => 'Пересечение по времени квеста'];
+    }
+
+    if ($booking['tea_room'] && $teaStart && has_tea_conflict($pdo, $teaStart, $teaEnd, $bookingId)) {
+        return ['success' => false, 'message' => 'Пересечение чайной комнаты'];
+    }
+
+    $allowed_statuses = ['new', 'confirmed', 'completed', 'canceled', 'no_show'];
+    if (!in_array($status, $allowed_statuses, true)) {
+        $status = $booking['status'];
+    }
+
+    $now = new DateTime();
+    if (in_array($status, ['new', 'confirmed'], true) && $end < $now) {
+        $status = 'completed';
+    }
+
+    if ($status === 'confirmed' && $prepaymentAmount === 0) {
+        $prepaymentAmount = 1000;
+    }
+
+    $prepaymentPaidAt = $prepaymentAmount > 0 ? ($booking['prepayment_paid_at'] ?? (new DateTime())->format('Y-m-d H:i:s')) : null;
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare('UPDATE bookings SET start_at = :start_at, end_at = :end_at, tea_start_at = :tea_start_at, tea_end_at = :tea_end_at, players = :players, status = :status, prepayment_amount = :prepayment_amount, prepayment_paid_at = :prepayment_paid_at, comment = :comment, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([
+            ':start_at' => $start->format('Y-m-d H:i:s'),
+            ':end_at' => $end->format('Y-m-d H:i:s'),
+            ':tea_start_at' => $teaStart ? $teaStart->format('Y-m-d H:i:s') : null,
+            ':tea_end_at' => $teaEnd ? $teaEnd->format('Y-m-d H:i:s') : null,
+            ':players' => $players,
+            ':status' => $status,
+            ':prepayment_amount' => $prepaymentAmount,
+            ':prepayment_paid_at' => $prepaymentPaidAt,
+            ':comment' => $comment,
+            ':id' => $bookingId,
+        ]);
+
+        if ($status === 'completed') {
+            $updatedBooking = array_merge($booking, [
+                'start_at' => $start->format('Y-m-d H:i:s'),
+                'players' => $players,
+            ]);
+            $pricing = calculate_pricing($updatedBooking, $start, $players, (bool)$booking['tea_room']);
+            $finalAmount = max(0, $pricing['total'] - $prepaymentAmount);
+            $pdo->prepare('INSERT INTO payments (booking_id, base_amount, extra_players_amount, tea_room_amount, total_amount, payment_type, paid_at, created_at) VALUES (:booking_id, :base, :extra, :tea, :total, :payment_type, NOW(), NOW()) ON DUPLICATE KEY UPDATE base_amount = VALUES(base_amount), extra_players_amount = VALUES(extra_players_amount), tea_room_amount = VALUES(tea_room_amount), total_amount = VALUES(total_amount), payment_type = VALUES(payment_type), paid_at = VALUES(paid_at)')
+                ->execute([
+                    ':booking_id' => $bookingId,
+                    ':base' => $pricing['base'],
+                    ':extra' => $pricing['extra'],
+                    ':tea' => $pricing['tea'],
+                    ':total' => $finalAmount,
+                    ':payment_type' => $input['payment_type'] ?? 'cash',
+                ]);
+        } else {
+            $pdo->prepare('DELETE FROM payments WHERE booking_id = :booking_id')->execute([':booking_id' => $bookingId]);
+        }
+
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'booking' => [
+                'id' => $bookingId,
+                'start_at' => $start->format('Y-m-d H:i:s'),
+                'end_at' => $end->format('Y-m-d H:i:s'),
+                'quest_name' => $booking['quest_name'] ?? 'Неизвестный квест',
+                'client_name' => $booking['client_name'],
+                'players' => $players,
+                'status' => $status,
+                'prepayment_amount' => $prepaymentAmount,
+                'comment' => $comment,
+            ],
+        ];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Не удалось обновить бронь'];
+    }
+}
+
+function delete_booking(int $bookingId): bool
+{
+    $pdo = get_db();
+    $stmt = $pdo->prepare('DELETE FROM bookings WHERE id = :id');
+    return $stmt->execute([':id' => $bookingId]);
+}

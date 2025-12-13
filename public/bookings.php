@@ -110,10 +110,26 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
                         <div class="text-muted">На выбранную дату бронирований нет</div>
                     <?php else: ?>
                         <?php foreach ($dayBookings as $booking): ?>
-                            <div class="day-booking-row status-<?= h($booking['status']) ?>">
-                                <div class="fw-bold"><?= h(date('H:i', strtotime($booking['start_at']))) ?> - <?= h(date('H:i', strtotime($booking['end_at']))) ?></div>
-                                <div><?= h($booking['quest_name'] ?? 'Квест') ?></div>
-                                <div class="small"><?= h($booking['client_name']) ?> — <?= h($booking['status']) ?></div>
+                            <div class="day-booking-row status-<?= h($booking['status']) ?>"
+                                 data-booking-id="<?= h($booking['id']) ?>"
+                                 data-start="<?= h($booking['start_at']) ?>"
+                                 data-end="<?= h($booking['end_at']) ?>"
+                                 data-players="<?= h($booking['players']) ?>"
+                                 data-status="<?= h($booking['status']) ?>"
+                                 data-prepayment="<?= h($booking['prepayment_amount'] ?? 0) ?>"
+                                 data-comment="<?= h($booking['comment'] ?? '') ?>"
+                                 data-client="<?= h($booking['client_name']) ?>"
+                                 data-quest="<?= h($booking['quest_name'] ?? 'Квест') ?>">
+                                <div class="day-booking-main">
+                                    <div class="fw-bold booking-time"><?= h(date('H:i', strtotime($booking['start_at']))) ?> - <?= h(date('H:i', strtotime($booking['end_at']))) ?></div>
+                                    <div class="booking-quest"><?= h($booking['quest_name'] ?? 'Квест') ?></div>
+                                    <div class="small booking-client"><span class="booking-client-name"><?= h($booking['client_name']) ?></span> — <span class="booking-status-label"><?= h($booking['status']) ?></span></div>
+                                </div>
+                                <div class="day-booking-actions">
+                                    <button type="button" class="btn-icon" data-action="edit" title="Изменить">✏️</button>
+                                    <button type="button" class="btn-icon text-danger" data-action="delete" title="Удалить">🗑</button>
+                                </div>
+                                <div class="day-booking-edit" hidden></div>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -189,26 +205,230 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
         const calendar = document.querySelector('.calendar-grid');
         const dateLabel = document.getElementById('selectedDateLabel');
         const listContainer = document.getElementById('dayBookings');
+        let activeEditRow = null;
 
         const formatDate = (value) => {
             const date = new Date(value);
             return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
         };
 
+        const parseDateTime = (value) => new Date((value || '').replace(' ', 'T'));
+        const formatTimeRange = (start, end) => {
+            const startDate = parseDateTime(start);
+            const endDate = parseDateTime(end);
+            return `${startDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+        };
+
+        const statuses = ['new', 'confirmed', 'completed', 'canceled', 'no_show'];
+
+        const closeActiveEdit = () => {
+            if (!activeEditRow) return;
+            const editBlock = activeEditRow.querySelector('.day-booking-edit');
+            if (editBlock) {
+                editBlock.hidden = true;
+                editBlock.innerHTML = '';
+                activeEditRow.classList.remove('editing');
+            }
+            activeEditRow = null;
+        };
+
+        const updateStatusClass = (row, newStatus) => {
+            statuses.forEach((st) => row.classList.remove(`status-${st}`));
+            row.classList.add(`status-${newStatus}`);
+        };
+
+        const buildEditForm = (row) => {
+            const editBlock = row.querySelector('.day-booking-edit');
+            const startValue = row.dataset.start;
+            const startTime = parseDateTime(startValue).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const players = row.dataset.players || '2';
+            const prepayment = row.dataset.prepayment || '0';
+            const comment = row.dataset.comment || '';
+            const status = row.dataset.status || 'new';
+
+            const form = document.createElement('form');
+            form.className = 'quick-edit-form';
+            form.innerHTML = `
+                <div class="form-grid">
+                    <label>
+                        <span>Время начала</span>
+                        <input type="time" name="start_time" required value="${startTime}" />
+                    </label>
+                    <label>
+                        <span>Игроки</span>
+                        <input type="number" name="players" min="1" value="${players}" />
+                    </label>
+                    <label>
+                        <span>Статус</span>
+                        <select name="status">
+                            ${statuses.map((st) => `<option value="${st}" ${st === status ? 'selected' : ''}>${st}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Предоплата</span>
+                        <input type="number" name="prepayment_amount" min="0" value="${prepayment}" />
+                    </label>
+                </div>
+                <label class="mt-2">
+                    <span>Комментарий</span>
+                    <textarea name="comment" rows="2" placeholder="Краткая заметка">${comment}</textarea>
+                </label>
+                <div class="edit-actions">
+                    <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-cancel>Отмена</button>
+                    <span class="form-error" aria-live="polite"></span>
+                </div>
+            `;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const errorBox = form.querySelector('.form-error');
+                errorBox.textContent = '';
+                const payload = {
+                    booking_id: row.dataset.bookingId,
+                    start_time: form.start_time.value,
+                    players: form.players.value,
+                    status: form.status.value,
+                    prepayment_amount: form.prepayment_amount.value,
+                    comment: form.comment.value.trim(),
+                };
+                try {
+                    const response = await fetch('/booking_quick_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await response.json();
+                    if (!data.success) {
+                        errorBox.textContent = data.message || 'Ошибка сохранения';
+                        return;
+                    }
+                    const updated = data.booking;
+                    row.dataset.start = updated.start_at;
+                    row.dataset.end = updated.end_at;
+                    row.dataset.players = updated.players;
+                    row.dataset.status = updated.status;
+                    row.dataset.prepayment = updated.prepayment_amount;
+                    row.dataset.comment = updated.comment || '';
+                    row.querySelector('.booking-time').textContent = formatTimeRange(updated.start_at, updated.end_at);
+                    row.querySelector('.booking-status-label').textContent = updated.status;
+                    updateStatusClass(row, updated.status);
+                    closeActiveEdit();
+                } catch (err) {
+                    errorBox.textContent = 'Ошибка сети';
+                }
+            });
+
+            form.querySelector('[data-cancel]')?.addEventListener('click', () => {
+                closeActiveEdit();
+            });
+
+            editBlock.innerHTML = '';
+            editBlock.appendChild(form);
+            editBlock.hidden = false;
+            row.classList.add('editing');
+            activeEditRow = row;
+        };
+
+        const attachActions = (row) => {
+            row.querySelector('[data-action="edit"]')?.addEventListener('click', () => {
+                if (activeEditRow && activeEditRow !== row) {
+                    closeActiveEdit();
+                }
+                buildEditForm(row);
+            });
+
+            row.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
+                if (!confirm('Удалить бронирование?')) return;
+                try {
+                    const response = await fetch('/booking_delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ booking_id: row.dataset.bookingId }),
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        row.remove();
+                        if (!listContainer.querySelector('.day-booking-row')) {
+                            listContainer.innerHTML = '<div class="text-muted">На выбранную дату бронирований нет</div>';
+                        }
+                    }
+                } catch (err) {
+                    // silent
+                }
+            });
+        };
+
+        const createRow = (item) => {
+            const row = document.createElement('div');
+            row.className = `day-booking-row status-${item.status}`;
+            row.dataset.bookingId = item.id;
+            row.dataset.start = item.start_at;
+            row.dataset.end = item.end_at;
+            row.dataset.players = item.players ?? 0;
+            row.dataset.status = item.status;
+            row.dataset.prepayment = item.prepayment_amount ?? 0;
+            row.dataset.comment = item.comment ?? '';
+            row.dataset.client = item.client_name ?? '';
+            row.dataset.quest = item.quest_name ?? '';
+
+            const main = document.createElement('div');
+            main.className = 'day-booking-main';
+
+            const time = document.createElement('div');
+            time.className = 'fw-bold booking-time';
+            time.textContent = formatTimeRange(item.start_at, item.end_at);
+
+            const quest = document.createElement('div');
+            quest.className = 'booking-quest';
+            quest.textContent = item.quest_name;
+
+            const client = document.createElement('div');
+            client.className = 'small booking-client';
+            const clientName = document.createElement('span');
+            clientName.className = 'booking-client-name';
+            clientName.textContent = item.client_name;
+            const status = document.createElement('span');
+            status.className = 'booking-status-label';
+            status.textContent = item.status;
+            client.append(clientName, document.createTextNode(' — '), status);
+
+            main.append(time, quest, client);
+
+            const actions = document.createElement('div');
+            actions.className = 'day-booking-actions';
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'btn-icon';
+            editBtn.dataset.action = 'edit';
+            editBtn.title = 'Изменить';
+            editBtn.textContent = '✏️';
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'btn-icon text-danger';
+            deleteBtn.dataset.action = 'delete';
+            deleteBtn.title = 'Удалить';
+            deleteBtn.textContent = '🗑';
+            actions.append(editBtn, deleteBtn);
+
+            const edit = document.createElement('div');
+            edit.className = 'day-booking-edit';
+            edit.hidden = true;
+
+            row.append(main, actions, edit);
+            attachActions(row);
+            return row;
+        };
+
         const renderItems = (items) => {
+            closeActiveEdit();
             if (!items.length) {
                 listContainer.innerHTML = '<div class="text-muted">На выбранную дату бронирований нет</div>';
                 return;
             }
             listContainer.innerHTML = '';
             items.forEach((item) => {
-                const row = document.createElement('div');
-                row.className = `day-booking-row status-${item.status}`;
-                const start = new Date(item.start_at);
-                const end = new Date(item.end_at);
-                row.innerHTML = `<div class="fw-bold">${start.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})} - ${end.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</div>
-                    <div>${item.quest_name}</div>
-                    <div class="small">${item.client_name} — ${item.status}</div>`;
+                const row = createRow(item);
                 listContainer.appendChild(row);
             });
         };
@@ -246,6 +466,8 @@ $weekdayOffset = ((int)$monthStart->format('N')) - 1;
             }
             btn.addEventListener('click', () => loadDay(btn.dataset.date));
         });
+
+        document.querySelectorAll('.day-booking-row').forEach((row) => attachActions(row));
     });
 </script>
 <?php

@@ -20,6 +20,9 @@ $items = array_map(function (array $booking) {
         'quest_name' => $booking['quest_name'] ?? 'Неизвестный квест',
         'client_name' => $booking['client_name'],
         'status' => $booking['status'],
+        'players' => (int)$booking['players'],
+        'prepayment_amount' => (int)($booking['prepayment_amount'] ?? 0),
+        'comment' => $booking['comment'] ?? '',
     ];
 }, $bookings);
 
