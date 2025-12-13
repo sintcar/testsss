@@ -141,7 +141,7 @@ function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null, string
     $allowedSorts = ['asc', 'desc'];
     $sortDirection = in_array(strtolower($sort), $allowedSorts, true) ? strtoupper($sort) : 'DESC';
 
-    $sql = 'SELECT b.*, q.name as quest_name, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, q.duration FROM bookings b JOIN quests q ON b.quest_id = q.id';
+    $sql = 'SELECT b.*, COALESCE(q.name, "Неизвестный квест") as quest_name, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, q.duration FROM bookings b LEFT JOIN quests q ON b.quest_id = q.id';
     $params = [];
     $conditions = [];
 
@@ -175,7 +175,7 @@ function get_bookings(PDO $pdo, ?string $from = null, ?string $to = null, string
 
 function get_booking(PDO $pdo, int $id): ?array
 {
-    $stmt = $pdo->prepare('SELECT b.*, q.duration, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, q.name as quest_name FROM bookings b JOIN quests q ON b.quest_id = q.id WHERE b.id = ?');
+    $stmt = $pdo->prepare('SELECT b.*, q.duration, q.price_9_12, q.price_13_17, q.price_18_21, q.tea_room_price, q.tea_room_duration, COALESCE(q.name, "Неизвестный квест") as quest_name FROM bookings b LEFT JOIN quests q ON b.quest_id = q.id WHERE b.id = ?');
     $stmt->execute([$id]);
     $booking = $stmt->fetch();
     return $booking ?: null;
