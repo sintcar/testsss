@@ -31,9 +31,13 @@ function redirect(string $path): void
     exit;
 }
 
-function h(string $value): string
+function h($value): string
 {
-    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    if ($value === null) {
+        return '';
+    }
+
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
 function render_error_page(string $title, string $message): void
