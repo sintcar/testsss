@@ -38,42 +38,55 @@ render_header($id ? 'Редактирование квеста' : 'Новый к
     <div class="col-lg-8">
         <h1 class="h4 mb-3"><?= $id ? 'Редактирование квеста' : 'Новый квест' ?></h1>
         <?php if ($error): ?><div class="alert alert-danger"><?= h($error) ?></div><?php endif; ?>
-        <form method="post" class="card card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Название</label>
-                    <input type="text" name="name" class="form-control" value="<?= h($quest['name'] ?? '') ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Длительность (мин)</label>
-                    <input type="number" name="duration" min="30" class="form-control" value="<?= h($quest['duration'] ?? 60) ?>" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Цена 09-12</label>
-                    <input type="number" name="price_9_12" class="form-control" value="<?= h($quest['price_9_12'] ?? 0) ?>" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Цена 13-17</label>
-                    <input type="number" name="price_13_17" class="form-control" value="<?= h($quest['price_13_17'] ?? 0) ?>" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Цена 18-22</label>
-                    <input type="number" name="price_18_21" class="form-control" value="<?= h($quest['price_18_21'] ?? 0) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Чайная комната (цена)</label>
-                    <input type="number" name="tea_room_price" class="form-control" value="<?= h($quest['tea_room_price'] ?? 0) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Чайная (длительность, мин)</label>
-                    <input type="number" name="tea_room_duration" step="60" min="60" class="form-control" value="<?= h($quest['tea_room_duration'] ?? 60) ?>" required>
-                </div>
-                <div class="col-12 form-check">
-                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" <?= ($quest['is_active'] ?? 1) ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="is_active">Активен</label>
+        <form method="post" class="card card-body quest-form">
+            <div class="form-section">
+                <h3 class="section-title">Основные данные</h3>
+                <div class="section-grid">
+                    <div>
+                        <label class="form-label">Название</label>
+                        <input type="text" name="name" class="form-control" value="<?= h($quest['name'] ?? '') ?>" required>
+                    </div>
+                    <div class="number-field">
+                        <label class="form-label">Длительность (мин)</label>
+                        <input type="number" name="duration" min="30" class="form-control" value="<?= h($quest['duration'] ?? 60) ?>" required>
+                    </div>
+                    <div class="form-check" style="margin-top: 6px;">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" <?= ($quest['is_active'] ?? 1) ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="is_active">Активен</label>
+                    </div>
                 </div>
             </div>
-            <div class="mt-3">
+            <div class="form-section">
+                <h3 class="section-title">Стоимость по времени</h3>
+                <div class="section-grid">
+                    <div class="number-field">
+                        <label class="form-label">Цена 09-12</label>
+                        <input type="number" name="price_9_12" class="form-control" value="<?= h($quest['price_9_12'] ?? 0) ?>" required>
+                    </div>
+                    <div class="number-field">
+                        <label class="form-label">Цена 13-17</label>
+                        <input type="number" name="price_13_17" class="form-control" value="<?= h($quest['price_13_17'] ?? 0) ?>" required>
+                    </div>
+                    <div class="number-field">
+                        <label class="form-label">Цена 18-22</label>
+                        <input type="number" name="price_18_21" class="form-control" value="<?= h($quest['price_18_21'] ?? 0) ?>" required>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 class="section-title">Чайная комната</h3>
+                <div class="section-grid">
+                    <div class="number-field">
+                        <label class="form-label">Чайная комната (цена)</label>
+                        <input type="number" name="tea_room_price" class="form-control" value="<?= h($quest['tea_room_price'] ?? 0) ?>" required>
+                    </div>
+                    <div class="number-field">
+                        <label class="form-label">Чайная (длительность, мин)</label>
+                        <input type="number" name="tea_room_duration" step="60" min="60" class="form-control" value="<?= h($quest['tea_room_duration'] ?? 60) ?>" required>
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
                 <button class="btn btn-success" type="submit">Сохранить</button>
             </div>
         </form>
