@@ -1,6 +1,10 @@
 <?php
 $config = [
     'env_file' => realpath(__DIR__ . '/../.env'),
+    'auth' => [
+        // Хэш сгенерирован через password_hash('YraF2015', PASSWORD_DEFAULT)
+        'password_hash' => '$2y$12$rl51pvdszajVYYNtw3dB4OtqCbBWF/JfezTmlAn.ZetNOIBB1j/FS',
+    ],
     'db' => [
         'host' => null,
         'name' => null,
@@ -31,6 +35,9 @@ if (file_exists($config['env_file'])) {
         }
         if ($key === 'APP_TIMEZONE') {
             date_default_timezone_set($value);
+        }
+        if ($key === 'APP_PASSWORD_HASH') {
+            $config['auth']['password_hash'] = $value;
         }
     }
 }
